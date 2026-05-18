@@ -210,45 +210,48 @@ function useSimpleCollection(uid, colName) {
 
 // ─── TAB CALCULADORA DE PRECIOS ───────────────────────────────
 function TabPrecios() {
-  const [costoMateriales, setCostoMateriales] = useState('')
-  const [costoTiempo,     setCostoTiempo]     = useState('')
-  const [horas,           setHoras]           = useState('')
   const [gastosFijos,     setGastosFijos]     = useState('')
-  const [sesionesMes,     setSesionesMes]     = useState('')
-  const [ganancia,        setGanancia]        = useState('30')
+  const [costoMateriales, setCostoMateriales] = useState('')
+  const [horasSesion,     setHorasSesion]     = useState('')
+  const [horasSemanales,  setHorasSemanales]  = useState('')
+  const [gananciaDeseada, setGananciaDeseada] = useState('')
 
-  const mat   = parseFloat(costoMateriales) || 0
-  const hora  = parseFloat(costoTiempo)     || 0
-  const hrs   = parseFloat(horas)           || 0
-  const fijos = parseFloat(gastosFijos)     || 0
-  const ses   = parseFloat(sesionesMes)     || 1
-  const pct   = parseFloat(ganancia)        || 30
+  const fijos   = parseFloat(gastosFijos)     || 0
+  const mat     = parseFloat(costoMateriales) || 0
+  const hrsSes  = parseFloat(horasSesion)     || 0
+  const hrsSem  = parseFloat(horasSemanales)  || 0
+  const ganancia= parseFloat(gananciaDeseada) || 0
 
-  const costoTiempoTotal = hora * hrs
-  const costoFijosPorSesion = fijos / ses
-  const costoTotal = mat + costoTiempoTotal + costoFijosPorSesion
-  const precioMinimo = costoTotal
-  const precioSugerido = costoTotal * (1 + pct/100)
-  const gananciaReal = precioSugerido - costoTotal
+  // Sesiones posibles al mes: horas disponibles / horas por sesión
+  const horasMes      = hrsSem * 4
+  const sesionesPosibles = hrsSes > 0 ? Math.floor(horasMes / hrsSes) : 0
 
-  const filas = [
-    { l: 'Materiales / edición', v: mat },
-    { l: 'Tiempo de trabajo', v: costoTiempoTotal },
-    { l: 'Gastos fijos prorrateados', v: costoFijosPorSesion },
-  ]
+  // Costo por sesión
+  const ses = sesionesPosibles || 1
+  const costoFijosPorSesion   = fijos / ses
+  const costoMaterialesSesion = mat
+  const costoTotal            = costoFijosPorSesion + costoMaterialesSesion
+
+  // Ganancia por sesión para llegar a la meta mensual
+  const gananciaPorSesion = sesionesPosibles > 0 ? ganancia / sesionesPosibles : 0
+
+  // Precios
+  const precioMinimo   = costoTotal
+  const precioSugerido = costoTotal + gananciaPorSesion
+
+  const hayDatos = fijos > 0 || mat > 0 || hrsSes > 0
 
   return (
     <div>
       <Card style={{ marginBottom: '16px' }}>
-        <Lbl>Datos de la sesión</Lbl>
+        <Lbl>🧮 Calculadora de precio de sesión</Lbl>
         <div style={{ display: 'grid', gap: '12px' }}>
           {[
-            { label: 'COSTO DE MATERIALES / EDICIÓN (MXN)', val: costoMateriales, set: setCostoMateriales, ph: 'ej. 500' },
-            { label: 'TU TARIFA POR HORA (MXN)', val: costoTiempo, set: setCostoTiempo, ph: 'ej. 300' },
-            { label: 'HORAS QUE DEDICAS (sesión + edición)', val: horas, set: setHoras, ph: 'ej. 6' },
             { label: 'GASTOS FIJOS DEL MES (renta, equipo, software…)', val: gastosFijos, set: setGastosFijos, ph: 'ej. 5000' },
-            { label: 'SESIONES QUE HACES AL MES', val: sesionesMes, set: setSesionesMes, ph: 'ej. 8' },
-            { label: '% DE GANANCIA DESEADA', val: ganancia, set: setGanancia, ph: 'ej. 30' },
+            { label: 'COSTO DE MATERIALES / EDICIÓN POR SESIÓN (MXN)', val: costoMateriales, set: setCostoMateriales, ph: 'ej. 300' },
+            { label: 'HORAS QUE LE DEDICAS A UNA SESIÓN (incluyendo edición)', val: horasSesion, set: setHorasSesion, ph: 'ej. 6' },
+            { label: 'HORAS QUE PUEDES TRABAJAR A LA SEMANA', val: horasSemanales, set: setHorasSemanales, ph: 'ej. 20' },
+            { label: 'CUÁNTO QUIERES GANAR AL MES (MXN)', val: gananciaDeseada, set: setGananciaDeseada, ph: 'ej. 15000' },
           ].map(({ label, val, set, ph }) => (
             <div key={label}>
               <label style={{ fontSize:'10px', color:C.muted, fontFamily:'monospace', letterSpacing:'1px', display:'block', marginBottom:'4px' }}>{label}</label>
@@ -258,31 +261,65 @@ function TabPrecios() {
         </div>
       </Card>
 
-      {costoTotal > 0 && (
+      {hayDatos && (
         <Card>
           <Lbl>Resultado</Lbl>
-          {filas.map(({ l, v }) => (
+
+          {/* Sesiones posibles */}
+          {hrsSes > 0 && hrsSem > 0 && (
+            <div style={{ background:C.bg, borderRadius:'8px', padding:'12px 14px', border:`1px solid ${C.border}`, marginBottom:'14px' }}>
+              <div style={{ fontSize:'9px', color:C.muted, fontFamily:'monospace', textTransform:'uppercase', letterSpacing:'1px', marginBottom:'4px' }}>
+                Con {hrsSem}h/semana y {hrsSes}h por sesión puedes hacer
+              </div>
+              <div style={{ fontSize:'24px', fontWeight:'bold', color:C.accent }}>
+                {sesionesPosibles} sesiones al mes
+              </div>
+              <div style={{ fontSize:'10px', color:C.muted, fontFamily:'monospace', marginTop:'2px' }}>
+                {horasMes}h disponibles al mes ÷ {hrsSes}h por sesión
+              </div>
+            </div>
+          )}
+
+          {/* Desglose costos */}
+          {[
+            { l: 'Gastos fijos por sesión', v: costoFijosPorSesion },
+            { l: 'Materiales / edición', v: costoMaterialesSesion },
+          ].map(({ l, v }) => (
             <div key={l} style={{ display:'flex', justifyContent:'space-between', padding:'8px 0', borderBottom:`1px solid ${C.border}` }}>
               <span style={{ fontSize:'13px', color:C.muted }}>{l}</span>
               <span style={{ fontSize:'13px', color:C.text, fontWeight:'bold' }}>{fmt(v)}</span>
             </div>
           ))}
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:'12px', marginTop:'16px' }}>
+
+          {/* Precios */}
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px', marginTop:'16px' }}>
             {[
-              { l:'Costo total', v:costoTotal, c:C.muted },
-              { l:'Precio mínimo', v:precioMinimo, c:C.blue },
-              { l:`Precio sugerido (+${pct}%)`, v:precioSugerido, c:C.accent },
-            ].map(({ l, v, c }) => (
+              { l:'Precio mínimo', v:precioMinimo, c:C.blue, sub:'Solo cubres costos' },
+              { l:'Precio sugerido', v:precioSugerido, c:C.accent, sub:`Incluye tu meta de ${fmt(ganancia)}/mes` },
+            ].map(({ l, v, c, sub }) => (
               <div key={l} style={{ background:C.bg, borderRadius:'10px', padding:'14px', border:`1px solid ${C.border}` }}>
                 <div style={{ fontSize:'9px', color:C.muted, fontFamily:'monospace', textTransform:'uppercase', letterSpacing:'1px', marginBottom:'4px' }}>{l}</div>
-                <div style={{ fontSize:'18px', fontWeight:'bold', color:c }}>{fmt(v)}</div>
+                <div style={{ fontSize:'22px', fontWeight:'bold', color:c }}>{fmt(v)}</div>
+                <div style={{ fontSize:'9px', color:C.muted, fontFamily:'monospace', marginTop:'3px' }}>{sub}</div>
               </div>
             ))}
           </div>
-          <div style={{ marginTop:'12px', background:C.bg, borderRadius:'8px', padding:'12px 14px', border:`1px solid ${C.border}` }}>
-            <span style={{ fontSize:'10px', color:C.muted, fontFamily:'monospace' }}>GANANCIA POR SESIÓN </span>
-            <span style={{ fontSize:'16px', color:C.green, fontWeight:'bold', marginLeft:'8px' }}>{fmt(gananciaReal)}</span>
-          </div>
+
+          {/* Ganancia por sesión */}
+          {ganancia > 0 && sesionesPosibles > 0 && (
+            <div style={{ marginTop:'12px', background:C.bg, borderRadius:'8px', padding:'12px 14px', border:`1px solid ${C.border}` }}>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                <div>
+                  <div style={{ fontSize:'9px', color:C.muted, fontFamily:'monospace', textTransform:'uppercase', letterSpacing:'1px' }}>Ganancia por sesión</div>
+                  <div style={{ fontSize:'18px', color:C.green, fontWeight:'bold' }}>{fmt(gananciaPorSesion)}</div>
+                </div>
+                <div style={{ textAlign:'right' }}>
+                  <div style={{ fontSize:'9px', color:C.muted, fontFamily:'monospace', textTransform:'uppercase', letterSpacing:'1px' }}>Meta mensual</div>
+                  <div style={{ fontSize:'18px', color:C.green, fontWeight:'bold' }}>{fmt(ganancia)}</div>
+                </div>
+              </div>
+            </div>
+          )}
         </Card>
       )}
     </div>
@@ -528,7 +565,7 @@ export default function KitFinanzas({ user, onLogout }) {
     { id:'ingresos', label:'💼 Ingresos'  },
     { id:'negocio',  label:'🗂️ Negocio'   },
     { id:'personal', label:'🏠 Personal'  },
-    { id:'precios',  label:'📐 Precios'   },
+    { id:'precios',  label:'🧮 Precios'   },
     { id:'tarjetas', label:'💳 Tarjetas'  },
     { id:'resumen',  label:'📅 Resumen'   },
   ]
