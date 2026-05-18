@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import {
-  onAuthStateChanged, signInWithPopup, signInWithRedirect,
+  onAuthStateChanged, signInWithRedirect,
   getRedirectResult, signOut,
   createUserWithEmailAndPassword, signInWithEmailAndPassword,
   sendPasswordResetEmail
@@ -29,8 +29,14 @@ export default function App() {
   const [msg,     setMsg]     = useState('')
 
   useEffect(() => {
-    // Maneja el resultado del redirect de Google en iOS
-    getRedirectResult(auth).catch(() => {})
+    // Primero intenta capturar resultado del redirect de Google
+    getRedirectResult(auth)
+      .then(result => {
+        if (result?.user) setUser(result.user)
+      })
+      .catch(() => {})
+
+    // Luego escucha cambios de auth normalmente
     const unsub = onAuthStateChanged(auth, u => setUser(u ?? null))
     return unsub
   }, [])
@@ -40,16 +46,10 @@ export default function App() {
   const loginGoogle = async () => {
     setLoading(true); reset()
     try {
-      // En iOS Safari usamos redirect para evitar el error de popup
-      const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent)
-      if (isIOS) {
-        await signInWithRedirect(auth, provider)
-      } else {
-        await signInWithPopup(auth, provider)
-      }
+      // Usamos redirect siempre — funciona en iOS Safari, Android y desktop
+      await signInWithRedirect(auth, provider)
     }
-    catch { setError('No se pudo iniciar sesión con Google.') }
-    finally { setLoading(false) }
+    catch { setError('No se pudo iniciar sesión con Google.'); setLoading(false) }
   }
 
   const loginEmail = async () => {
