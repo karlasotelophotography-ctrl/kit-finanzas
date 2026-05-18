@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import {
-  onAuthStateChanged, signInWithRedirect,
+  onAuthStateChanged, signInWithPopup, signInWithRedirect,
   getRedirectResult, signOut,
   createUserWithEmailAndPassword, signInWithEmailAndPassword,
   sendPasswordResetEmail
@@ -29,16 +29,21 @@ export default function App() {
   const [msg,     setMsg]     = useState('')
 
   useEffect(() => {
-    // Primero intenta capturar resultado del redirect de Google
+    let unsub = () => {}
+
     getRedirectResult(auth)
       .then(result => {
-        if (result?.user) setUser(result.user)
+        if (result?.user) {
+          setUser(result.user)
+        }
       })
       .catch(() => {})
+      .finally(() => {
+        // Solo después de procesar el redirect, escuchamos cambios
+        unsub = onAuthStateChanged(auth, u => setUser(u ?? null))
+      })
 
-    // Luego escucha cambios de auth normalmente
-    const unsub = onAuthStateChanged(auth, u => setUser(u ?? null))
-    return unsub
+    return () => unsub()
   }, [])
 
   const reset = () => { setError(''); setMsg('') }
@@ -46,10 +51,18 @@ export default function App() {
   const loginGoogle = async () => {
     setLoading(true); reset()
     try {
-      // Usamos redirect siempre — funciona en iOS Safari, Android y desktop
-      await signInWithRedirect(auth, provider)
+      await signInWithPopup(auth, provider)
     }
-    catch { setError('No se pudo iniciar sesión con Google.'); setLoading(false) }
+    catch (e) {
+      // Si popup falla (bloqueado en móvil), intentamos redirect
+      if (e.code === 'auth/popup-blocked' || e.code === 'auth/cancelled-popup-request') {
+        try { await signInWithRedirect(auth, provider) }
+        catch { setError('No se pudo iniciar sesión. Intenta con correo.') }
+      } else {
+        setError('No se pudo iniciar sesión con Google. Intenta con correo.')
+      }
+      setLoading(false)
+    }
   }
 
   const loginEmail = async () => {
