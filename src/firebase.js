@@ -4,7 +4,7 @@ import { getFirestore } from 'firebase/firestore'
 
 const firebaseConfig = {
   apiKey:            "AIzaSyAlb1b5fcF_BoP9IDhEm-1C6AidcpZRp4s",
-  authDomain:        "kit-finanzas.vercel.app",
+  authDomain:        "kit-finanzas-karla.firebaseapp.com",
   projectId:         "kit-finanzas-karla",
   storageBucket:     "kit-finanzas-karla.firebasestorage.app",
   messagingSenderId: "171814775539",
@@ -14,7 +14,6 @@ const firebaseConfig = {
 const app  = initializeApp(firebaseConfig)
 const auth = getAuth(app)
 
-// Persistencia local para que la sesión se mantenga en PWA
 setPersistence(auth, browserLocalPersistence).catch(() => {})
 
 export { auth }
