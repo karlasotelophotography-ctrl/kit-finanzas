@@ -99,7 +99,7 @@ function PagoSelector({ value, onChange }) {
     </div>
   )
 }
-function ListaMovimientos({ items, onDelete, colorMonto=C.accent, signo='' }) {
+function ListaMovimientos({ items, onDelete, onEdit, colorMonto=C.accent, signo='' }) {
   if (!items.length) return (
     <div style={{ color: C.muted, fontStyle: 'italic', fontSize: '13px', padding: '14px 0', textAlign: 'center' }}>
       Sin registros este mes.
@@ -116,27 +116,47 @@ function ListaMovimientos({ items, onDelete, colorMonto=C.accent, signo='' }) {
           {' · '}{r.fecha}
         </div>
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         <span style={{ fontSize: '15px', color: colorMonto, fontWeight: 'bold' }}>{signo}{fmt(r.monto)}</span>
+        <button onClick={() => onEdit(r)} style={{ background:'none', border:`1px solid ${C.border}`, borderRadius:'5px', color:C.muted, cursor:'pointer', fontSize:'12px', padding:'3px 7px', fontFamily:'monospace' }}>✏️</button>
         <button onClick={() => onDelete(r.id)} style={{ background:'none', border:'none', color:C.border, cursor:'pointer', fontSize:'18px', lineHeight:1 }}>×</button>
       </div>
     </div>
   ))
 }
-function FormRegistro({ label, categorias, onAdd, montoColor=C.red, placeholder='ej. 1500' }) {
+function FormRegistro({ label, categorias, onAdd, onUpdate, editItem, onCancelEdit, montoColor=C.red, placeholder='ej. 1500' }) {
   const [monto, setMonto] = useState('')
   const [cat,   setCat]   = useState(categorias[0])
   const [desc,  setDesc]  = useState('')
   const [forma, setForma] = useState('Tarjeta')
+
+  // Cuando llega un item a editar, llena los campos
+  useEffect(() => {
+    if (editItem) {
+      setMonto(String(editItem.monto))
+      setCat(editItem.categoria)
+      setDesc(editItem.desc)
+      setForma(editItem.formaPago)
+    }
+  }, [editItem])
+
   const submit = () => {
     const m = parseFloat(monto)
     if (!m || m<=0) return
-    onAdd({ id: Date.now().toString(), monto:m, categoria:cat, desc:desc||cat, formaPago:forma, fecha:new Date().toLocaleDateString('es-MX') })
-    setMonto(''); setDesc('')
+    if (editItem) {
+      onUpdate({ ...editItem, monto:m, categoria:cat, desc:desc||cat, formaPago:forma })
+      onCancelEdit()
+    } else {
+      onAdd({ id: Date.now().toString(), monto:m, categoria:cat, desc:desc||cat, formaPago:forma, fecha:new Date().toLocaleDateString('es-MX') })
+    }
+    setMonto(''); setDesc(''); setCat(categorias[0]); setForma('Tarjeta')
   }
+
+  const isEditing = !!editItem
+
   return (
-    <Card style={{ marginBottom: '16px' }}>
-      <Lbl>{label}</Lbl>
+    <Card style={{ marginBottom: '16px', border: isEditing ? `1px solid ${C.accent}` : `1px solid ${C.border}` }}>
+      <Lbl>{isEditing ? '✏️ Editando registro' : label}</Lbl>
       <div style={{ display: 'grid', gap: '12px' }}>
         <div>
           <label style={{ fontSize:'10px', color:C.muted, fontFamily:'monospace', letterSpacing:'1px', display:'block', marginBottom:'4px' }}>MONTO (MXN)</label>
@@ -154,7 +174,16 @@ function FormRegistro({ label, categorias, onAdd, montoColor=C.red, placeholder=
           <label style={{ fontSize:'10px', color:C.muted, fontFamily:'monospace', letterSpacing:'1px', display:'block', marginBottom:'4px' }}>DESCRIPCIÓN (opcional)</label>
           <input type="text" value={desc} placeholder="ej. Sesión familia Martínez" onChange={e=>setDesc(e.target.value)} onKeyDown={e=>e.key==='Enter'&&submit()} style={inp}/>
         </div>
-        <button onClick={submit} style={{ background:C.accent, color:'#FFF', border:'none', borderRadius:'8px', padding:'13px', fontSize:'13px', fontWeight:'bold', cursor:'pointer', fontFamily:'monospace', letterSpacing:'2px', textTransform:'uppercase' }}>+ Agregar</button>
+        <div style={{ display:'flex', gap:'8px' }}>
+          <button onClick={submit} style={{ flex:1, background:C.accent, color:'#FFF', border:'none', borderRadius:'8px', padding:'13px', fontSize:'13px', fontWeight:'bold', cursor:'pointer', fontFamily:'monospace', letterSpacing:'2px', textTransform:'uppercase' }}>
+            {isEditing ? '✓ Guardar cambios' : '+ Agregar'}
+          </button>
+          {isEditing && (
+            <button onClick={() => { onCancelEdit(); setMonto(''); setDesc(''); setCat(categorias[0]); setForma('Tarjeta') }} style={{ background:'none', border:`1px solid ${C.border}`, borderRadius:'8px', padding:'13px 16px', fontSize:'13px', cursor:'pointer', color:C.muted, fontFamily:'monospace' }}>
+              Cancelar
+            </button>
+          )}
+        </div>
       </div>
     </Card>
   )
@@ -185,7 +214,11 @@ function useCollection(uid, colName) {
   const removeItem = useCallback(async (id) => {
     await deleteDoc(doc(db, 'usuarios', uid, colName, id))
   }, [uid, colName])
-  return { data, addItem, removeItem }
+  const updateItem = useCallback(async (mes, item) => {
+    const ref = doc(db, 'usuarios', uid, colName, item.id)
+    await setDoc(ref, { ...item, mes })
+  }, [uid, colName])
+  return { data, addItem, removeItem, updateItem }
 }
 
 function useSimpleCollection(uid, colName) {
@@ -535,6 +568,12 @@ export default function KitFinanzas({ user, onLogout }) {
   const [tab,    setTab]    = useState('ingresos')
   const uid = user.uid
 
+  // Estados de edición por sección
+  const [editIng, setEditIng] = useState(null)
+  const [editGN,  setEditGN]  = useState(null)
+  const [editGP,  setEditGP]  = useState(null)
+  const [editXP,  setEditXP]  = useState(null)
+
   const ing = useCollection(uid, 'ingresos')
   const gn  = useCollection(uid, 'gastosNegocio')
   const gp  = useCollection(uid, 'gastosPersonal')
@@ -651,8 +690,11 @@ export default function KitFinanzas({ user, onLogout }) {
                 ))}
               </div>
             </Card>
-            <FormRegistro label="Registrar ingreso" categorias={CATS_INGRESO} montoColor={C.accent} placeholder="ej. 8500" onAdd={item=>ing.addItem(mk,item)}/>
-            <Card><Lbl>Ingresos — {MESES[mesIdx]}</Lbl><ListaMovimientos items={regIng} colorMonto={C.accent} onDelete={id=>ing.removeItem(id)}/></Card>
+            <FormRegistro label="Registrar ingreso" categorias={CATS_INGRESO} montoColor={C.accent} placeholder="ej. 8500"
+              onAdd={item=>ing.addItem(mk,item)}
+              onUpdate={item=>ing.updateItem(mk,item)}
+              editItem={editIng} onCancelEdit={()=>setEditIng(null)}/>
+            <Card><Lbl>Ingresos — {MESES[mesIdx]}</Lbl><ListaMovimientos items={regIng} colorMonto={C.accent} onDelete={id=>ing.removeItem(id)} onEdit={r=>setEditIng(r)}/></Card>
           </div>
         )}
 
@@ -675,8 +717,11 @@ export default function KitFinanzas({ user, onLogout }) {
               </div>
               <BalBar disp={totalBruto} gast={totalGN}/>
             </Card>
-            <FormRegistro label="Registrar gasto del negocio" categorias={CATS_NEGOCIO} montoColor={C.red} placeholder="ej. 1200" onAdd={item=>gn.addItem(mk,item)}/>
-            <Card><Lbl>Gastos — {MESES[mesIdx]}</Lbl><ListaMovimientos items={regGN} colorMonto={C.red} signo="- " onDelete={id=>gn.removeItem(id)}/></Card>
+            <FormRegistro label="Registrar gasto del negocio" categorias={CATS_NEGOCIO} montoColor={C.red} placeholder="ej. 1200"
+              onAdd={item=>gn.addItem(mk,item)}
+              onUpdate={item=>gn.updateItem(mk,item)}
+              editItem={editGN} onCancelEdit={()=>setEditGN(null)}/>
+            <Card><Lbl>Gastos — {MESES[mesIdx]}</Lbl><ListaMovimientos items={regGN} colorMonto={C.red} signo="- " onDelete={id=>gn.removeItem(id)} onEdit={r=>setEditGN(r)}/></Card>
           </div>
         )}
 
@@ -699,10 +744,16 @@ export default function KitFinanzas({ user, onLogout }) {
               </div>
               <BalBar disp={persDisp} gast={totalGP}/>
             </Card>
-            <FormRegistro label="➕ Ingreso extra personal" categorias={CATS_EXTRA} montoColor={C.green} placeholder="ej. 500" onAdd={item=>xp.addItem(mk,item)}/>
-            {regXP.length>0 && <Card style={{ marginBottom:'16px' }}><Lbl>Ingresos Extra — {MESES[mesIdx]}</Lbl><ListaMovimientos items={regXP} colorMonto={C.green} signo="+ " onDelete={id=>xp.removeItem(id)}/></Card>}
-            <FormRegistro label="➖ Gasto personal" categorias={CATS_PERSONAL} montoColor={C.red} placeholder="ej. 900" onAdd={item=>gp.addItem(mk,item)}/>
-            <Card><Lbl>Gastos Personales — {MESES[mesIdx]}</Lbl><ListaMovimientos items={regGP} colorMonto={C.red} signo="- " onDelete={id=>gp.removeItem(id)}/></Card>
+            <FormRegistro label="➕ Ingreso extra personal" categorias={CATS_EXTRA} montoColor={C.green} placeholder="ej. 500"
+              onAdd={item=>xp.addItem(mk,item)}
+              onUpdate={item=>xp.updateItem(mk,item)}
+              editItem={editXP} onCancelEdit={()=>setEditXP(null)}/>
+            {regXP.length>0 && <Card style={{ marginBottom:'16px' }}><Lbl>Ingresos Extra — {MESES[mesIdx]}</Lbl><ListaMovimientos items={regXP} colorMonto={C.green} signo="+ " onDelete={id=>xp.removeItem(id)} onEdit={r=>setEditXP(r)}/></Card>}
+            <FormRegistro label="➖ Gasto personal" categorias={CATS_PERSONAL} montoColor={C.red} placeholder="ej. 900"
+              onAdd={item=>gp.addItem(mk,item)}
+              onUpdate={item=>gp.updateItem(mk,item)}
+              editItem={editGP} onCancelEdit={()=>setEditGP(null)}/>
+            <Card><Lbl>Gastos Personales — {MESES[mesIdx]}</Lbl><ListaMovimientos items={regGP} colorMonto={C.red} signo="- " onDelete={id=>gp.removeItem(id)} onEdit={r=>setEditGP(r)}/></Card>
           </div>
         )}
 
@@ -778,7 +829,7 @@ export default function KitFinanzas({ user, onLogout }) {
       </main>
 
       <footer style={{ borderTop:`1px solid ${C.border}`, padding:'12px 20px', marginTop:'32px', display:'flex', justifyContent:'space-between' }}>
-        <span style={{ fontSize:'9px', color:C.border, fontFamily:'monospace', letterSpacing:'2px' }}>KIT DE FINANZAS PARA FOTÓGRAFAS © 2026</span>
+        <span style={{ fontSize:'9px', color:C.border, fontFamily:'monospace', letterSpacing:'2px' }}>KIT DE FINANZAS PARA FOTÓGRAFOS © 2026</span>
         <span style={{ fontSize:'9px', color:C.border, fontFamily:'monospace' }}>RESICO + IVA · Régimen simplificado</span>
       </footer>
     </div>
