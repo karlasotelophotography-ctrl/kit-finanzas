@@ -127,16 +127,10 @@ export default function App() {
           width: '100%', background: C.accent, color: '#FFF', border: 'none',
           borderRadius: '8px', padding: '13px', fontSize: '13px', fontWeight: 'bold',
           cursor: 'pointer', fontFamily: 'monospace', letterSpacing: '1px',
-          opacity: loading ? 0.7 : 1, marginBottom: '16px',
+          opacity: loading ? 0.7 : 1, marginBottom: '16px', display: 'none'
         }}>
           🔐 Entrar con Google
         </button>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-          <div style={{ flex: 1, height: '1px', background: C.border }} />
-          <span style={{ fontSize: '11px', color: C.muted, fontFamily: 'monospace' }}>O</span>
-          <div style={{ flex: 1, height: '1px', background: C.border }} />
-        </div>
 
         {mode !== 'reset' && (
           <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
