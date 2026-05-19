@@ -724,11 +724,11 @@ export default function KitFinanzas({ user, onLogout }) {
 
   const TABS = [
     { id:'ingresos',  label:'💼 Ingresos'  },
+    { id:'negocio',   label:'💸 Gastos'    },
     { id:'clientes',  label:'👥 Clientes'  },
-    { id:'negocio',   label:'🗂️ Negocio'   },
     { id:'personal',  label:'🏠 Personal'  },
-    { id:'precios',   label:'🧮 Precios'   },
     { id:'tarjetas',  label:'💳 Tarjetas'  },
+    { id:'precios',   label:'🧮 Precios'   },
     { id:'resumen',   label:'📅 Resumen'   },
   ]
 
