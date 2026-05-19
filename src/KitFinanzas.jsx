@@ -260,12 +260,21 @@ function useSimpleCollection(uid, colName) {
 }
 
 // ─── TAB CALCULADORA DE PRECIOS ───────────────────────────────
+const PRECIOS_KEY = 'kf_calculadora'
+
 function TabPrecios() {
-  const [gastosFijos,     setGastosFijos]     = useState('')
-  const [costoMateriales, setCostoMateriales] = useState('')
-  const [horasSesion,     setHorasSesion]     = useState('')
-  const [horasSemanales,  setHorasSemanales]  = useState('')
-  const [gananciaDeseada, setGananciaDeseada] = useState('')
+  const saved = (() => { try { return JSON.parse(localStorage.getItem(PRECIOS_KEY)) || {} } catch { return {} } })()
+
+  const [gastosFijos,     setGastosFijos]     = useState(saved.gastosFijos     || '')
+  const [costoMateriales, setCostoMateriales] = useState(saved.costoMateriales || '')
+  const [horasSesion,     setHorasSesion]     = useState(saved.horasSesion     || '')
+  const [horasSemanales,  setHorasSemanales]  = useState(saved.horasSemanales  || '')
+  const [gananciaDeseada, setGananciaDeseada] = useState(saved.gananciaDeseada || '')
+
+  // Guardar en localStorage cada vez que cambia un valor
+  useEffect(() => {
+    localStorage.setItem(PRECIOS_KEY, JSON.stringify({ gastosFijos, costoMateriales, horasSesion, horasSemanales, gananciaDeseada }))
+  }, [gastosFijos, costoMateriales, horasSesion, horasSemanales, gananciaDeseada])
 
   const fijos   = parseFloat(gastosFijos)     || 0
   const mat     = parseFloat(costoMateriales) || 0
