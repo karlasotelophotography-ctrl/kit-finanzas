@@ -518,24 +518,60 @@ function TabTarjetas({ uid }) {
               <button onClick={agregarGasto} style={{ background:C.accent, color:'#FFF', border:'none', borderRadius:'8px', padding:'13px', fontSize:'13px', fontWeight:'bold', cursor:'pointer', fontFamily:'monospace', letterSpacing:'2px', textTransform:'uppercase' }}>+ Agregar</button>
             </div>
           </Card>
-          <Card>
-            <Lbl>Gastos registrados</Lbl>
-            {gastos.items.length === 0 && <div style={{ color:C.muted, fontStyle:'italic', fontSize:'13px', padding:'14px 0', textAlign:'center' }}>Sin gastos registrados.</div>}
-            {gastos.items.map(r => (
-              <div key={r.id} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'10px 0', borderBottom:`1px solid ${C.border}` }}>
-                <div>
-                  <div style={{ fontSize:'13px', color:C.text }}>{r.desc}</div>
-                  <div style={{ fontSize:'10px', color:C.muted, fontFamily:'monospace', marginTop:'2px' }}>
-                    {r.tarjeta} · {r.fecha} {r.corte && `· Corte ${r.corte}`}
+
+          {/* Gastos por tarjeta */}
+          {TARJETAS.map(t => {
+            const gastosT = gastos.items.filter(r => r.tarjeta === t)
+            const totalT  = gastosT.reduce((s, r) => s + r.monto, 0)
+            if (gastosT.length === 0) return null
+
+            // Calcular fecha de pago: 20 días después del corte más reciente
+            const cortesConFecha = gastosT.filter(r => r.corte).map(r => r.corte).sort().reverse()
+            const ultimoCorte = cortesConFecha[0]
+            let fechaPago = null
+            if (ultimoCorte) {
+              const d = new Date(ultimoCorte + 'T12:00:00')
+              d.setDate(d.getDate() + 20)
+              fechaPago = d.toLocaleDateString('es-MX', { day:'numeric', month:'long', year:'numeric' })
+            }
+
+            return (
+              <Card key={t} style={{ marginBottom:'12px' }}>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'12px' }}>
+                  <div>
+                    <div style={{ fontSize:'10px', color:C.muted, fontFamily:'monospace', letterSpacing:'2px', textTransform:'uppercase', marginBottom:'3px' }}>💳 {t}</div>
+                    {fechaPago && (
+                      <div style={{ fontSize:'11px', color:C.accent, fontFamily:'monospace' }}>
+                        Pago: {fechaPago}
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ textAlign:'right' }}>
+                    <div style={{ fontSize:'9px', color:C.muted, fontFamily:'monospace', textTransform:'uppercase', letterSpacing:'1px' }}>Total</div>
+                    <div style={{ fontSize:'20px', fontWeight:'bold', color:C.red }}>{fmt(totalT)}</div>
                   </div>
                 </div>
-                <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
-                  <span style={{ fontSize:'15px', color:C.red, fontWeight:'bold' }}>{fmt(r.monto)}</span>
-                  <button onClick={() => gastos.removeItem(r.id)} style={{ background:'none', border:'none', color:C.border, cursor:'pointer', fontSize:'18px', lineHeight:1 }}>×</button>
-                </div>
-              </div>
-            ))}
-          </Card>
+                {gastosT.map(r => (
+                  <div key={r.id} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'10px 0', borderBottom:`1px solid ${C.border}` }}>
+                    <div>
+                      <div style={{ fontSize:'13px', color:C.text }}>{r.desc}</div>
+                      <div style={{ fontSize:'10px', color:C.muted, fontFamily:'monospace', marginTop:'2px' }}>
+                        {r.fecha}{r.corte && ` · Corte ${r.corte}`}
+                      </div>
+                    </div>
+                    <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
+                      <span style={{ fontSize:'15px', color:C.red, fontWeight:'bold' }}>{fmt(r.monto)}</span>
+                      <button onClick={() => gastos.removeItem(r.id)} style={{ background:'none', border:'none', color:C.border, cursor:'pointer', fontSize:'18px', lineHeight:1 }}>×</button>
+                    </div>
+                  </div>
+                ))}
+              </Card>
+            )
+          })}
+
+          {gastos.items.length === 0 && (
+            <Card><div style={{ color:C.muted, fontStyle:'italic', fontSize:'13px', padding:'14px 0', textAlign:'center' }}>Sin gastos registrados.</div></Card>
+          )}
         </div>
       )}
 
