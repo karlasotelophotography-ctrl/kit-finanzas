@@ -777,16 +777,32 @@ export default function KitFinanzas({ user, onLogout }) {
           <div>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:'10px', marginBottom:'16px' }}>
               {[
-                { l:'Ingresos Totales', v:totalBruto, c:C.accent },
-                { l:'Impuestos', v:impuestos, c:C.red, sub: totalEfec>0 ? `Efectivo ${fmt(totalEfec)} sin IVA` : null },
+                { l:'Impuestos', v:impuestos, c:C.red },
                 { l:'Neto', v:neto, c:C.green },
-              ].map(({ l, v, c, sub }) => (
+              ].map(({ l, v, c }) => (
                 <Card key={l} style={{ padding:'14px 16px' }}>
                   <div style={{ fontSize:'9px', color:C.muted, letterSpacing:'2px', fontFamily:'monospace', textTransform:'uppercase', marginBottom:'5px' }}>{l}</div>
                   <div style={{ fontSize:'18px', fontWeight:'bold', color:c }}>{fmt(v)}</div>
-                  {sub && <div style={{ fontSize:'9px', color:C.muted, fontFamily:'monospace', marginTop:'3px' }}>{sub}</div>}
                 </Card>
               ))}
+              <Card style={{ padding:'14px 16px' }}>
+                <div style={{ fontSize:'9px', color:C.muted, letterSpacing:'2px', fontFamily:'monospace', textTransform:'uppercase', marginBottom:'5px' }}>Ingresos Totales</div>
+                <div style={{ fontSize:'18px', fontWeight:'bold', color:C.accent }}>{fmt(totalBruto)}</div>
+                {totalBruto > 0 && (
+                  <div style={{ marginTop:'8px', display:'flex', flexDirection:'column', gap:'4px' }}>
+                    <div style={{ display:'flex', justifyContent:'space-between', fontSize:'10px', fontFamily:'monospace' }}>
+                      <span style={{ color:C.muted }}>🏦💳 Facturable</span>
+                      <span style={{ color:C.text, fontWeight:'bold' }}>{fmt(totalFact)}</span>
+                    </div>
+                    {totalEfec > 0 && (
+                      <div style={{ display:'flex', justifyContent:'space-between', fontSize:'10px', fontFamily:'monospace' }}>
+                        <span style={{ color:C.muted }}>💵 Efectivo</span>
+                        <span style={{ color:C.text, fontWeight:'bold' }}>{fmt(totalEfec)}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </Card>
             </div>
             <Card style={{ marginBottom:'16px' }}>
               <Lbl>Distribución del Neto</Lbl>
