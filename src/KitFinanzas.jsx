@@ -370,14 +370,31 @@ function TabTarjetas({ uid }) {
   const [tarjeta,     setTarjeta]     = useState('Tarjeta 1')
   const [fecha,       setFecha]       = useState('')
   const [corte,       setCorte]       = useState('')
-  // MSI
   const [montoMSI,    setMontoMSI]    = useState('')
   const [descMSI,     setDescMSI]     = useState('')
   const [tarjetaMSI,  setTarjetaMSI]  = useState('Tarjeta 1')
   const [msiMeses,    setMsiMeses]    = useState(12)
   const [fechaMSI,    setFechaMSI]    = useState('')
 
-  const TARJETAS = ['Tarjeta 1', 'Tarjeta 2', 'Tarjeta 3']
+  // Nombres personalizables de tarjetas
+  const [nombres, setNombres] = useState(['Tarjeta 1', 'Tarjeta 2', 'Tarjeta 3'])
+  const [editandoIdx, setEditandoIdx] = useState(null)
+  const [nombreTemp, setNombreTemp] = useState('')
+
+  const TARJETAS = nombres
+
+  const guardarNombre = (idx) => {
+    if (nombreTemp.trim()) {
+      const nuevos = [...nombres]
+      nuevos[idx] = nombreTemp.trim()
+      setNombres(nuevos)
+      // Si la tarjeta seleccionada era la que se editó, actualizar selección
+      if (tarjeta === nombres[idx]) setTarjeta(nuevos[idx])
+      if (tarjetaMSI === nombres[idx]) setTarjetaMSI(nuevos[idx])
+    }
+    setEditandoIdx(null)
+    setNombreTemp('')
+  }
 
   const totalGastos = gastos.items.reduce((s, r) => s + r.monto, 0)
   const totalMSI    = msi.items.reduce((s, r) => s + r.monto, 0)
@@ -399,6 +416,48 @@ function TabTarjetas({ uid }) {
 
   return (
     <div>
+      {/* Nombres de tarjetas */}
+      <Card style={{ marginBottom:'16px' }}>
+        <Lbl>Mis tarjetas</Lbl>
+        <div style={{ display:'flex', flexDirection:'column', gap:'8px' }}>
+          {nombres.map((nombre, idx) => (
+            <div key={idx} style={{ display:'flex', alignItems:'center', gap:'10px' }}>
+              {editandoIdx === idx ? (
+                <>
+                  <input
+                    autoFocus
+                    value={nombreTemp}
+                    onChange={e => setNombreTemp(e.target.value)}
+                    onKeyDown={e => { if (e.key==='Enter') guardarNombre(idx); if (e.key==='Escape') setEditandoIdx(null) }}
+                    style={{ ...inp, flex:1, padding:'8px 12px', fontSize:'14px' }}
+                    placeholder={nombre}
+                  />
+                  <button onClick={() => guardarNombre(idx)} style={{
+                    background:C.accent, color:'#FFF', border:'none', borderRadius:'6px',
+                    padding:'8px 14px', cursor:'pointer', fontFamily:'monospace', fontSize:'12px'
+                  }}>✓</button>
+                  <button onClick={() => setEditandoIdx(null)} style={{
+                    background:'none', border:`1px solid ${C.border}`, borderRadius:'6px',
+                    padding:'8px 12px', cursor:'pointer', color:C.muted, fontSize:'12px'
+                  }}>✕</button>
+                </>
+              ) : (
+                <>
+                  <div style={{ flex:1, padding:'8px 12px', background:C.bg, borderRadius:'6px',
+                    border:`1px solid ${C.border}`, fontSize:'14px', color:C.text }}>
+                    💳 {nombre}
+                  </div>
+                  <button onClick={() => { setEditandoIdx(idx); setNombreTemp(nombre) }} style={{
+                    background:'none', border:`1px solid ${C.border}`, borderRadius:'6px',
+                    padding:'8px 10px', cursor:'pointer', color:C.muted, fontSize:'12px', fontFamily:'monospace'
+                  }}>✏️</button>
+                </>
+              )}
+            </div>
+          ))}
+        </div>
+      </Card>
+
       {/* Resumen */}
       <Card style={{ marginBottom:'16px' }}>
         <Lbl>Resumen de Tarjetas</Lbl>
