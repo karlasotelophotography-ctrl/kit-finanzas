@@ -124,32 +124,38 @@ function ListaMovimientos({ items, onDelete, onEdit, colorMonto=C.accent, signo=
     </div>
   ))
 }
-function FormRegistro({ label, categorias, onAdd, onUpdate, editItem, onCancelEdit, montoColor=C.red, placeholder='ej. 1500' }) {
-  const [monto, setMonto] = useState('')
-  const [cat,   setCat]   = useState(categorias[0])
-  const [desc,  setDesc]  = useState('')
-  const [forma, setForma] = useState('Tarjeta')
+function FormRegistro({ label, categorias, onAdd, onUpdate, editItem, onCancelEdit, montoColor=C.red, placeholder='ej. 1500', showCliente=false }) {
+  const [monto,    setMonto]    = useState('')
+  const [cat,      setCat]      = useState(categorias[0])
+  const [desc,     setDesc]     = useState('')
+  const [forma,    setForma]    = useState('Tarjeta')
+  const [cliente,  setCliente]  = useState('')
+  const [contacto, setContacto] = useState('')
 
-  // Cuando llega un item a editar, llena los campos
   useEffect(() => {
     if (editItem) {
       setMonto(String(editItem.monto))
       setCat(editItem.categoria)
       setDesc(editItem.desc)
       setForma(editItem.formaPago)
+      setCliente(editItem.cliente || '')
+      setContacto(editItem.contacto || '')
     }
   }, [editItem])
 
   const submit = () => {
     const m = parseFloat(monto)
     if (!m || m<=0) return
+    const item = { monto:m, categoria:cat, desc:desc||cat, formaPago:forma,
+      ...(showCliente && { cliente, contacto }) }
     if (editItem) {
-      onUpdate({ ...editItem, monto:m, categoria:cat, desc:desc||cat, formaPago:forma })
+      onUpdate({ ...editItem, ...item })
       onCancelEdit()
     } else {
-      onAdd({ id: Date.now().toString(), monto:m, categoria:cat, desc:desc||cat, formaPago:forma, fecha:new Date().toLocaleDateString('es-MX') })
+      onAdd({ id: Date.now().toString(), ...item, fecha:new Date().toLocaleDateString('es-MX') })
     }
     setMonto(''); setDesc(''); setCat(categorias[0]); setForma('Tarjeta')
+    setCliente(''); setContacto('')
   }
 
   const isEditing = !!editItem
@@ -174,12 +180,24 @@ function FormRegistro({ label, categorias, onAdd, onUpdate, editItem, onCancelEd
           <label style={{ fontSize:'10px', color:C.muted, fontFamily:'monospace', letterSpacing:'1px', display:'block', marginBottom:'4px' }}>DESCRIPCIÓN (opcional)</label>
           <input type="text" value={desc} placeholder="ej. Sesión familia Martínez" onChange={e=>setDesc(e.target.value)} onKeyDown={e=>e.key==='Enter'&&submit()} style={inp}/>
         </div>
+        {showCliente && (
+          <>
+            <div>
+              <label style={{ fontSize:'10px', color:C.muted, fontFamily:'monospace', letterSpacing:'1px', display:'block', marginBottom:'4px' }}>NOMBRE DEL CLIENTE</label>
+              <input type="text" value={cliente} placeholder="ej. Familia Martínez" onChange={e=>setCliente(e.target.value)} style={inp}/>
+            </div>
+            <div>
+              <label style={{ fontSize:'10px', color:C.muted, fontFamily:'monospace', letterSpacing:'1px', display:'block', marginBottom:'4px' }}>TELÉFONO O CORREO</label>
+              <input type="text" value={contacto} placeholder="ej. 8112345678 o correo@gmail.com" onChange={e=>setContacto(e.target.value)} style={inp}/>
+            </div>
+          </>
+        )}
         <div style={{ display:'flex', gap:'8px' }}>
           <button onClick={submit} style={{ flex:1, background:C.accent, color:'#FFF', border:'none', borderRadius:'8px', padding:'13px', fontSize:'13px', fontWeight:'bold', cursor:'pointer', fontFamily:'monospace', letterSpacing:'2px', textTransform:'uppercase' }}>
             {isEditing ? '✓ Guardar cambios' : '+ Agregar'}
           </button>
           {isEditing && (
-            <button onClick={() => { onCancelEdit(); setMonto(''); setDesc(''); setCat(categorias[0]); setForma('Tarjeta') }} style={{ background:'none', border:`1px solid ${C.border}`, borderRadius:'8px', padding:'13px 16px', fontSize:'13px', cursor:'pointer', color:C.muted, fontFamily:'monospace' }}>
+            <button onClick={() => { onCancelEdit(); setMonto(''); setDesc(''); setCat(categorias[0]); setForma('Tarjeta'); setCliente(''); setContacto('') }} style={{ background:'none', border:`1px solid ${C.border}`, borderRadius:'8px', padding:'13px 16px', fontSize:'13px', cursor:'pointer', color:C.muted, fontFamily:'monospace' }}>
               Cancelar
             </button>
           )}
@@ -696,12 +714,13 @@ export default function KitFinanzas({ user, onLogout }) {
   const maxAnual     = Math.max(...datosAnuales, 1)
 
   const TABS = [
-    { id:'ingresos', label:'💼 Ingresos'  },
-    { id:'negocio',  label:'🗂️ Negocio'   },
-    { id:'personal', label:'🏠 Personal'  },
-    { id:'precios',  label:'🧮 Precios'   },
-    { id:'tarjetas', label:'💳 Tarjetas'  },
-    { id:'resumen',  label:'📅 Resumen'   },
+    { id:'ingresos',  label:'💼 Ingresos'  },
+    { id:'clientes',  label:'👥 Clientes'  },
+    { id:'negocio',   label:'🗂️ Negocio'   },
+    { id:'personal',  label:'🏠 Personal'  },
+    { id:'precios',   label:'🧮 Precios'   },
+    { id:'tarjetas',  label:'💳 Tarjetas'  },
+    { id:'resumen',   label:'📅 Resumen'   },
   ]
 
   return (
@@ -732,7 +751,7 @@ export default function KitFinanzas({ user, onLogout }) {
       <main style={{ maxWidth:'760px', margin:'0 auto', padding:'20px 16px' }}>
 
         {/* Selector mes — solo para tabs financieros */}
-        {['ingresos','negocio','personal','resumen'].includes(tab) && (
+        {['ingresos','clientes','negocio','personal','resumen'].includes(tab) && (
           <div style={{ display:'flex', gap:'5px', marginBottom:'22px', overflowX:'auto', paddingBottom:'4px' }}>
             {MESES.map((m,i) => {
               const tiene = (ing.data[i]||[]).length>0||(gn.data[i]||[]).length>0||(gp.data[i]||[]).length>0
@@ -786,10 +805,53 @@ export default function KitFinanzas({ user, onLogout }) {
               </div>
             </Card>
             <FormRegistro label="Registrar ingreso" categorias={CATS_INGRESO} montoColor={C.accent} placeholder="ej. 8500"
+              showCliente={true}
               onAdd={item=>ing.addItem(mk,item)}
               onUpdate={item=>ing.updateItem(mk,item)}
               editItem={editIng} onCancelEdit={()=>setEditIng(null)}/>
             <Card><Lbl>Ingresos — {MESES[mesIdx]}</Lbl><ListaMovimientos items={regIng} colorMonto={C.accent} onDelete={id=>ing.removeItem(id)} onEdit={r=>setEditIng(r)}/></Card>
+          </div>
+        )}
+
+        {/* ── CLIENTES ── */}
+        {tab==='clientes' && (
+          <div>
+            <Card style={{ marginBottom:'16px' }}>
+              <Lbl>Clientes — {MESES[mesIdx]}</Lbl>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px', marginBottom:'14px' }}>
+                <div style={{ background:C.bg, borderRadius:'10px', padding:'12px', border:`1px solid ${C.border}` }}>
+                  <div style={{ fontSize:'9px', color:C.muted, fontFamily:'monospace', textTransform:'uppercase', letterSpacing:'1px', marginBottom:'4px' }}>Clientes este mes</div>
+                  <div style={{ fontSize:'24px', fontWeight:'bold', color:C.accent }}>{regIng.filter(r=>r.cliente).length}</div>
+                </div>
+                <div style={{ background:C.bg, borderRadius:'10px', padding:'12px', border:`1px solid ${C.border}` }}>
+                  <div style={{ fontSize:'9px', color:C.muted, fontFamily:'monospace', textTransform:'uppercase', letterSpacing:'1px', marginBottom:'4px' }}>Facturado</div>
+                  <div style={{ fontSize:'24px', fontWeight:'bold', color:C.green }}>{fmt(totalBruto)}</div>
+                </div>
+              </div>
+              {regIng.filter(r => r.cliente).length === 0 && (
+                <div style={{ color:C.muted, fontStyle:'italic', fontSize:'13px', padding:'14px 0', textAlign:'center' }}>
+                  Agrega el nombre del cliente al registrar ingresos para verlos aquí.
+                </div>
+              )}
+              {regIng.filter(r => r.cliente).map(r => (
+                <div key={r.id} style={{ padding:'14px 0', borderBottom:`1px solid ${C.border}` }}>
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
+                    <div>
+                      <div style={{ fontSize:'15px', fontWeight:'500', color:C.text }}>{r.cliente || r.desc}</div>
+                      <div style={{ fontSize:'11px', color:C.muted, fontFamily:'monospace', marginTop:'3px' }}>
+                        {r.categoria} · {ICON[r.formaPago]} {r.formaPago} · {r.fecha}
+                      </div>
+                      {r.contacto && (
+                        <div style={{ fontSize:'11px', color:C.accent, fontFamily:'monospace', marginTop:'3px' }}>
+                          📞 {r.contacto}
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ fontSize:'16px', fontWeight:'bold', color:C.accent }}>{fmt(r.monto)}</div>
+                  </div>
+                </div>
+              ))}
+            </Card>
           </div>
         )}
 
